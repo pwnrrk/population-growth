@@ -1,0 +1,13 @@
+{
+  "populationTitle": "Population growth per country",
+  "clickOnLegendHint": "Click on the legend below to filter by continent 👇",
+  "region": "Region",
+  "asia": "Asia",
+  "europe": "Europe",
+  "africa": "Africa",
+  "oceania": "Oceania",
+  "americas": "Americas",
+  "source": "Source",
+  "ourWorldName": "Our World In Data",
+  "total": "Total"
+}
