@@ -29,8 +29,8 @@ export default function Home() {
   const [isRunning, setIsRunning] = useState(false);
   const animationFrameId = useRef<number>(null);
   const [data, setData] = useState<Population[]>([]);
-  const [time, setTime] = useState(0);
-  const [maxCountry, setMaxCountry] = useState(12);
+  const [_time, setTime] = useState(0);
+  const [maxCountry] = useState(12);
   const year = useRef<number>(START);
   const indicator = useRef<HTMLDivElement>(null);
   const isFinished = year.current >= MAX;
