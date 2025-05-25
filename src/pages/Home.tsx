@@ -12,9 +12,7 @@ const numberFormat = new Intl.NumberFormat();
 
 const START = 1950;
 const MAX = 2021;
-const DELTA_TIME_SCALE = 100000;
 const TOTAL_YEARS = MAX - START;
-const speedMultiplier = 5;
 
 const regions: Record<string, string> = {
   Asia: "bg-violet-500",
@@ -27,74 +25,22 @@ const regions: Record<string, string> = {
 export default function Home() {
   const { t } = useTranslation();
   const [isRunning, setIsRunning] = useState(false);
-  const animationFrameId = useRef<number>(null);
   const [data, setData] = useState<Population[]>([]);
-  const [_time, setTime] = useState(0);
   const [maxCountry] = useState(12);
-  const year = useRef<number>(START);
-  const indicator = useRef<HTMLDivElement>(null);
-  const isFinished = year.current >= MAX;
-  const lastTime = useRef(0);
-  const fps = useRef<30 | 60>(60);
-  const speed = useRef(1);
+  const [year, setYear] = useState(START);
   const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
+  const [duration] = useState(1000);
+  const indicator = useRef<HTMLDivElement>(null); // Year indicator
+  const animationFrame = useRef<number>(null);
+  const lastFrameTime = useRef<number>(null);
+  const startTime = useRef<number>(null);
+  const startValue = useRef(START);
+  const fps = useRef<30 | 60>(60);
+  const isFinished = year >= MAX;
 
-  function animate() {
-    const timestamp = Date.now();
-    const calculatedFPS = DELTA_TIME_SCALE / fps.current;
-    const deltaTime = timestamp - lastTime.current;
-    lastTime.current = timestamp;
-    setTime(deltaTime);
-
-    if (year.current && year.current >= MAX) return stopAnimation();
-    year.current +=
-      (deltaTime / calculatedFPS) * speed.current * speedMultiplier;
-    const currentDiff = MAX - year.current!;
-    const totalDiff = TOTAL_YEARS;
-    const progress = ((totalDiff - currentDiff) / totalDiff) * 100;
-    indicator.current!.style.transform = `translateX(${progress}%)`;
-    animationFrameId.current = requestAnimationFrame(animate);
-  }
-
-  function startAnimation() {
-    setIsRunning(true);
-    lastTime.current = Date.now();
-    animationFrameId.current = requestAnimationFrame(animate);
-  }
-
-  function stopAnimation() {
-    setIsRunning(false);
-    cancelAnimationFrame(animationFrameId.current!);
-  }
-
-  function reset() {
-    stopAnimation();
-    indicator.current!.style.transform = "";
-    year.current = START;
-    setTime(Date.now());
-    setSelectedRegion(null);
-  }
-
-  useEffect(() => {
-    return () => {
-      if (animationFrameId.current) {
-        cancelAnimationFrame(animationFrameId.current);
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    getPopulations().then((populations) => setData(populations));
-  }, []);
-
-  const dataInYear = data.filter(
-    (row) => row.Year === Math.round(year.current)
-  );
-
+  const dataInYear = data.filter((row) => row.Year === Math.round(year));
   dataInYear.sort((a, b) => b.Population - a.Population);
-
   const total = dataInYear[0]?.Population || 0;
-
   const topCountries = dataInYear
     .filter((row) => byCountry(row["Country name"]))
     .filter((row) =>
@@ -106,10 +52,71 @@ export default function Home() {
 
   const topCountryTotal = topCountries[0]?.Population || 0;
 
+  function startAnimation() {
+    setIsRunning(true);
+  }
+
+  function stopAnimation() {
+    setIsRunning(false);
+  }
+
+  function reset() {
+    stopAnimation();
+    indicator.current!.style.transform = "";
+    setYear(START);
+    setSelectedRegion(null);
+  }
+
   function getPercentage(country: Population) {
     const { Population } = country;
     return (Population / topCountryTotal) * 100;
   }
+
+  useEffect(() => {
+    getPopulations().then((populations) => setData(populations));
+  }, []);
+
+  useEffect(() => {
+    if (!isRunning || isFinished) {
+      if (animationFrame.current) cancelAnimationFrame(animationFrame.current);
+      return;
+    }
+
+    startValue.current = year;
+    startTime.current = null;
+    lastFrameTime.current = null;
+    const interval = 1000 / fps.current;
+
+    function animate(timestamp: number) {
+      if (!startTime.current) startTime.current = timestamp;
+      const deltaTime = timestamp - startTime.current;
+
+      if (
+        !lastFrameTime.current || //First frame
+        timestamp - lastFrameTime.current >= interval // Animated at frame rates
+      ) {
+        lastFrameTime.current = timestamp;
+        const progress = Math.min(deltaTime / duration, 1);
+        const current = startValue.current + progress;
+
+        const currentDiff = MAX - current;
+        const totalDiff = TOTAL_YEARS;
+        const percentage = ((totalDiff - currentDiff) / totalDiff) * 100;
+        indicator.current!.style.transform = `translateX(${percentage}%)`;
+        setYear(current);
+      }
+
+      if (deltaTime < duration) {
+        animationFrame.current = requestAnimationFrame(animate);
+      }
+    }
+
+    animationFrame.current = requestAnimationFrame(animate);
+
+    return () => {
+      if (animationFrame.current) cancelAnimationFrame(animationFrame.current);
+    };
+  }, [duration, isFinished, isRunning, year]);
 
   return (
     <main className="max-w-screen-lg m-auto p-4 text-gray-700">
@@ -153,7 +160,7 @@ export default function Home() {
                   <div className="absolute inset-0 flex items-center gap-1">
                     <div
                       className={clsx(
-                        "w-[var(--percentage)] transition-all flex items-center px-0.5 justify-end ease-linear h-8",
+                        "w-[var(--percentage)] min-w-8 transition-all flex items-center px-0.5 justify-end ease-linear h-8",
                         regions[countryInfo.continent]
                       )}
                       style={
@@ -167,6 +174,7 @@ export default function Home() {
                     <span>
                       <AnimatedNumber
                         target={Math.round(item.Population)}
+                        duration={duration}
                         formatter={numberFormat.format}
                         fps={20}
                         shouldAnimate={isRunning}
@@ -179,7 +187,7 @@ export default function Home() {
           })}
         </div>
         <div className="text-end text-gray-500 absolute right-10 bottom-40">
-          <div className="text-7xl font-medium">{year.current?.toFixed(0)}</div>
+          <div className="text-7xl font-medium">{year.toFixed(0)}</div>
           <div className="text-3xl">
             {t("total")}:{" "}
             <AnimatedNumber
@@ -187,6 +195,7 @@ export default function Home() {
               shouldAnimate={isRunning}
               fps={20}
               formatter={numberFormat.format}
+              duration={duration}
             />
           </div>
         </div>

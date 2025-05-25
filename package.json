@@ -17,6 +17,7 @@
     "country-code-lookup": "^0.1.3",
     "country-flag-icons": "^1.5.19",
     "date-fns": "^4.1.0",
+    "framer-motion": "^12.12.2",
     "i18next": "^25.2.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
