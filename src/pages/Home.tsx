@@ -1,4 +1,9 @@
-import { PauseCircleIcon, PlayCircleIcon } from "@heroicons/react/20/solid";
+import {
+  ArrowTurnUpLeftIcon,
+  CodeBracketIcon,
+  PauseCircleIcon,
+  PlayCircleIcon,
+} from "@heroicons/react/20/solid";
 import clsx from "clsx";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
@@ -260,10 +265,23 @@ export default function Home() {
           </a>
         </div>
       </div>
-      <div className="p-4">
-        <button onClick={reset} disabled={isRunning} className="underline">
+      <div className="p-4 flex gap-4 items-center">
+        <button
+          onClick={reset}
+          disabled={isRunning}
+          className="font-medium flex gap-1 cursor-pointer items-center"
+        >
+          <ArrowTurnUpLeftIcon className="size-4" />
           {t("reset")}
         </button>
+        <a
+          href="https://github.com/pwnrrk/population-growth"
+          target="_blank"
+          rel="noopener"
+          className="flex items-center gap-1 font-medium"
+        >
+          <CodeBracketIcon className="size-4" /> Source Code
+        </a>
       </div>
     </main>
   );
