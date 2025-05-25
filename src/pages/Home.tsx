@@ -13,6 +13,7 @@ const numberFormat = new Intl.NumberFormat();
 const START = 1950;
 const MAX = 2021;
 const TOTAL_YEARS = MAX - START;
+const yScale = 200000000;
 
 const regions: Record<string, string> = {
   Asia: "bg-violet-500",
@@ -40,7 +41,6 @@ export default function Home() {
 
   const dataInYear = data.filter((row) => row.Year === Math.round(year));
   dataInYear.sort((a, b) => b.Population - a.Population);
-  const total = dataInYear[0]?.Population || 0;
   const topCountries = dataInYear
     .filter((row) => byCountry(row["Country name"]))
     .filter((row) =>
@@ -50,7 +50,12 @@ export default function Home() {
     )
     .splice(0, maxCountry);
 
+  const total = topCountries.reduce((prev, curr) => {
+    return prev + curr.Population;
+  }, 0);
   const topCountryTotal = topCountries[0]?.Population || 0;
+
+  const topCountryStep = Math.round(topCountryTotal / yScale);
 
   function startAnimation() {
     setIsRunning(true);
@@ -78,6 +83,7 @@ export default function Home() {
 
   useEffect(() => {
     if (!isRunning || isFinished) {
+      setIsRunning(false);
       if (animationFrame.current) cancelAnimationFrame(animationFrame.current);
       return;
     }
@@ -134,19 +140,37 @@ export default function Home() {
                 "flex gap-2 items-center rounded cursor-pointer",
                 selectedRegion === key && "font-medium"
               )}
-              onClick={() => setSelectedRegion(key)}
+              onClick={() =>
+                setSelectedRegion((prev) => (prev === key ? null : key))
+              }
             >
               <div className={clsx(regions[key], "size-4")}></div> {key}
             </button>
           ))}
         </div>
-        <div className="relative h-[450px] mt-8 grid grid-cols-[auto_1fr] gap-x-2 gap-y-1 items-center py-4 font-medium text-gray-500">
+        <div className="relative h-[450px] mt-10 grid grid-cols-[auto_1fr] gap-x-2 gap-y-1 items-center py-4 font-medium text-gray-500">
+          <div className="absolute -top-8 left-33 right-20 bottom-0">
+            {Array.from(new Array(topCountryStep)).map((_, index) => (
+              <div
+                key={index}
+                className="text-center transition-all flex flex-col items-center absolute top-0 bottom-0 left-[var(--left)]"
+                style={
+                  {
+                    "--left": `${(index / topCountryStep) * 100}%`,
+                  } as CSSProperties
+                }
+              >
+                <div>{numberFormat.format(index * yScale)}</div>
+                <div className="border-l-2 border-l-gray-100 my-4 mb-5 flex-1"></div>
+              </div>
+            ))}
+          </div>
           {topCountries.map((item, index) => {
             const countryInfo = byCountry(item["Country name"])!;
             return (
               <div
                 key={item["Country name"]}
-                className="grid grid-cols-[auto_1fr] gap-x-2 transition-all duration-500 col-span-full absolute top-[var(--top)] left-0 right-0"
+                className="absolute grid grid-cols-[auto_1fr] gap-x-2 transition-all duration-500 col-span-full top-[var(--top)] left-0 right-0"
                 style={
                   {
                     "--top": `${index * 8}%`,
@@ -171,7 +195,7 @@ export default function Home() {
                     >
                       <Flag code={countryInfo.iso2} />
                     </div>
-                    <span>
+                    <span className="bg-white">
                       <AnimatedNumber
                         target={Math.round(item.Population)}
                         duration={duration}
